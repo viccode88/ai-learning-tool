@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect,useState } from 'react';
 
 
 import { Sidebar } from './components/Sidebar';
@@ -7,9 +7,9 @@ import MathPage from './pages/MathPage';
 import SettingsPage from './pages/SettingsPage';
 import ToolboxPage from './pages/ToolboxPage';
 
-
 const App = () => {
   const [currentPage, setCurrentPage] = useState('chat');
+  // const [data, setData] = useState(null);
 
   const handlePageChange = (page) => {
     if (currentPage !== page) {
@@ -17,6 +17,13 @@ const App = () => {
       setCurrentPage(page);
     }
   };
+
+  // useEffect(() => {
+  //   fetch('http://127.0.0.1:5000/api/data')
+  //       .then(response => response.json())
+  //       .then(data => setData(data.message));
+  //   },[]
+  // );
 
   const renderContent = () => {
     console.log("Rendering page:", currentPage); // Debug 當前頁面
