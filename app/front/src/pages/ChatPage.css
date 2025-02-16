@@ -1,0 +1,27 @@
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* 讓整個區塊填滿視窗高度 */
+  }
+  
+  .chat-content {
+    flex-grow: 1; /* 讓聊天內容自動填滿剩餘空間 */
+    overflow-y: auto; /* 允許滾動 */
+  }
+  
+  .chat-input {
+    width: 100%;
+    padding: 10px;
+    background-color: white;
+    border-top: 1px solid #ddd; /* 添加頂部邊框 */
+    box-sizing: border-box;
+    margin-bottom: 50px; /* 距離視窗底部 50px */
+  }
+  
+  .chat-input input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
