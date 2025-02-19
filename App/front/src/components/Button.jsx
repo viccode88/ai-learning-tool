@@ -4,7 +4,7 @@ import PropTypes from "prop-types";
 function Button({ label, onClick, color}) {
     return <
         button onClick={onClick}
-        className="px-4 py-2 bg-blue-500 text-white rounded hover:{color}"
+        className=" px-4 py-2 ${color} text-black rounded hover:bg-blue-600"
     >{label}</button>;
 }
 

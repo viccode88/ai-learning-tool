@@ -9,11 +9,11 @@ function InputBox() {
       <input
         type="text"
         placeholder="輸入你的名字"
-        className="border p-2 rounded"
+        className="m-2 border p-2 rounded"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <Button label="提交" onClick={() => alert(`你好, ${name}!`)  } color={"bg-green-600"}  />
+      <Button label="提交" onClick={() => alert(`你好, ${name}!`)  } color="bg-green-600"  />
     </div>
   );
 }
