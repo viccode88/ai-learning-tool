@@ -13,7 +13,7 @@ function InputBox() {
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <Button label="提交" onClick={() => alert(`你好, ${name}!`)} />
+      <Button label="提交" onClick={() => alert(`你好, ${name}!`)  } color={"bg-green-600"}  />
     </div>
   );
 }
