@@ -1,0 +1,57 @@
+[
+    {
+        "role": "user",
+        "timestamp": "2025-02-23T10:00:00Z",
+        "message": "您好，我想查詢天氣預報。"
+    },
+    {
+        "role": "assistant",
+        "timestamp": "2025-02-23T10:00:05Z",
+        "message": "您好，請問您想查詢哪個城市的天氣預報呢？"
+    },
+    {
+        "role": "user",
+        "timestamp": "2025-02-23T10:00:15Z",
+        "message": "台北市。"
+    },
+    {
+        "role": "assistant",
+        "timestamp": "2025-02-23T10:00:20Z",
+        "message": "好的，請問您需要查詢幾天的天氣預報？"
+    },
+    {
+        "role": "user",
+        "timestamp": "2025-02-23T10:00:30Z",
+        "message": "請給我未來三天的預報。"
+    },
+    {
+        "role": "assistant",
+        "timestamp": "2025-02-23T10:00:35Z",
+        "message": "明白了，正在為您準備台北市未來三天的天氣預報。"
+    },
+    {
+        "role": "user",
+        "timestamp": "2025-02-28T20:17:33.521241",
+        "message": "AS"
+    },
+    {
+        "role": "user",
+        "timestamp": "2025-02-28T20:17:36.222470",
+        "message": "aa"
+    },
+    {
+        "role": "user",
+        "timestamp": "2025-02-28T20:17:37.765252",
+        "message": "aa"
+    },
+    {
+        "role": "user",
+        "timestamp": "2025-02-28T20:17:39.326201",
+        "message": "aaa"
+    },
+    {
+        "role": "user",
+        "timestamp": "2025-02-28T20:17:40.280014",
+        "message": "aa"
+    }
+]
