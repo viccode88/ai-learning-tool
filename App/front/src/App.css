@@ -1,21 +1,22 @@
 #root {
-  max-width: 1280px;
+  width: 100%; /* 让根元素占据全宽 */
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  color: #000000;
 }
 
 .logo {
   height: 6em;
   padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+  will-change: transform;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  transform: scale(1.05);
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  transform: scale(1.05) rotate(5deg);
 }
 
 @keyframes logo-spin {
@@ -29,14 +30,66 @@
 
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+    animation: logo-spin infinite 20s cubic-bezier(0.4, 0, 0.2, 1) linear;
   }
 }
 
 .card {
   padding: 2em;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #000000;
+}
+
+.card:hover {
+  transform: translateY(-2px);
 }
 
 .read-the-docs {
-  color: #888;
+  color: #8E8E93;
+  transition: color 0.2s ease;
 }
+
+.read-the-docs:hover {
+  color: #007AFF;
+}
+
+/* 確保Sidebar的寬度 */
+.sidebar {
+  width: 250px; /* 或者你想要的任何固定寬度 */
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #000000;
+}
+
+@media (prefers-color-scheme: dark) {
+  #root {
+    color: #ffffff;
+  }
+
+  .card {
+    background: rgba(28, 28, 30, 0.8);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
+  }
+  
+  .sidebar {
+    background: rgba(28, 28, 30, 0.8);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+  
+  .read-the-docs {
+    color: #8E8E93;
+  }
+  
+  .read-the-docs:hover {
+    color: #0A84FF;
+  }
+}
+

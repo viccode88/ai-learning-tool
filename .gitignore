@@ -1,0 +1,8 @@
+__pycache__/
+backend/__pycache__/
+backend/.DS_Store
+conversation_data/
+conversation_history/
+data/
+run/
+.env
