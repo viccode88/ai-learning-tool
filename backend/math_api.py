@@ -1,12 +1,13 @@
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from typing import Dict, List, Optional
+from model_registry import model_registry
 
 # 導入數學解題模塊
 from math_solver import (
     MathProblem, MathSolution, ConceptRequest, ConceptExplanation, 
     QuestionRequest, MathDomain, DifficultyLevel, ImageMathProblem,
-    math_solver, get_available_concepts, search_concepts,
+    math_solver, get_available_concepts,
     list_conversations, ConversationInfo, MathSolutionResponse
 )
 
@@ -29,18 +30,18 @@ def register_math_endpoints(app: FastAPI):
     async def solve_math_problem(problem: MathProblem):
         """
         解決數學問題
-        
-        功能特點：
-        - 統一使用 gpt-o4-mini 模型
-        - 高思考努力程度
-        - 條列式輸出解題步驟
-        - 詳細解釋推理過程
-        - 避免硬算，使用巧妙方法
-        - 提供關鍵洞察
+
+        說明：
+        - 輸入問題與可選的領域/難度/概念
+        - 條列式輸出步驟與推理
+        - 實際模型由 model_registry 或環境變數決定
         """
         try:
             response = await math_solver.solve_problem(problem)
             return response
+        except HTTPException:
+            # 保留內部拋出的狀態碼與訊息（例如 NOT_MATH 或解析錯誤）
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"解題失敗: {str(e)}")
     
@@ -78,16 +79,6 @@ def register_math_endpoints(app: FastAPI):
         specific_concepts: Optional[str] = None,
         additional_context: Optional[str] = None
     ):
-        """
-        解決圖片中的數學問題
-        
-        功能特點：
-        - 支援多種圖片格式 (JPEG, PNG, WebP)
-        - 使用 gpt-4o-mini 的視覺能力
-        - 自動識別圖片中的數學問題
-        - 提供與文字解題相同品質的詳細解答
-        - 支援幾何圖形、函數圖表等複雜數學內容
-        """
         try:
             # 檢查檔案類型
             if not image.content_type or not image.content_type.startswith('image/'):
@@ -145,18 +136,7 @@ def register_math_endpoints(app: FastAPI):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"獲取概念列表失敗: {str(e)}")
     
-    @app.get("/api/v1/math/concepts/search", tags=["Math"])
-    async def search_math_concepts(keyword: str):
-        """
-        搜索數學概念
-        
-        根據關鍵字搜索相關的數學概念
-        """
-        try:
-            results = search_concepts(keyword)
-            return {"results": results, "total": len(results)}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"搜索概念失敗: {str(e)}")
+    # 已移除：GET /api/v1/math/concepts/search 端點（不再提供關鍵字搜尋）
     
     @app.get("/api/v1/math/domains", tags=["Math"])
     async def list_math_domains():
@@ -174,43 +154,8 @@ def register_math_endpoints(app: FastAPI):
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"獲取領域列表失敗: {str(e)}")
-    
-    @app.get("/api/v1/math/status", tags=["Math"])
-    async def get_solver_status():
-        """
-        獲取解題器狀態
         
-        返回當前解題器的狀態信息
-        """
-        try:
-            has_current_solution = math_solver.current_solution is not None
-            current_problem = None
-            if has_current_solution:
-                current_problem = {
-                    "problem": math_solver.current_solution.problem,
-                    "domain": math_solver.current_solution.domain,
-                    "steps_count": len(math_solver.current_solution.steps)
-                }
-            
-            return {
-                "model": math_solver.model,
-                "has_current_solution": has_current_solution,
-                "current_problem": current_problem
-            }
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"獲取狀態失敗: {str(e)}")
-    
-    @app.get("/api/v1/math/info", tags=["Math"])
-    async def get_api_info():
-        """
-        獲取數學解題API資訊
-        
-        返回API的詳細資訊，包括功能特點、支援領域等
-        """
-        try:
-            return get_math_api_info()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"獲取API資訊失敗: {str(e)}")
+    # 已移除：GET /api/v1/math/info 端點（改由 OpenAPI 提供自述資訊）
 
 # --- 使用範例 ---
 class MathAPIUsageExample:
@@ -242,36 +187,3 @@ class MathAPIUsageExample:
             "step_number": 2,
             "context": "在解一元二次方程式的過程中"
         }
-
-# --- 輔助函數 ---
-def get_math_api_info():
-    """獲取數學API資訊"""
-    return {
-        "name": "數學解題API",
-        "version": "1.1.0",
-        "description": "專業的高中數學問題解決系統",
-        "features": [
-            "使用 gpt-4o-mini 模型",
-            "高思考努力程度",
-            "條列式解題步驟",
-            "詳細推理解釋",
-            "智能解題方法",
-            "概念查詢功能",
-            "互動式問答",
-            "圖片解題功能",
-            "問題描述清晰度檢查"
-        ],
-        "supported_domains": [domain.value for domain in MathDomain],
-        "supported_difficulties": [level.value for level in DifficultyLevel],
-        "endpoints": [
-            "POST /api/v1/math/solve - 解決數學問題（附描述清晰度檢查）",
-            "POST /api/v1/math/solve-image - 解決圖片中的數學問題",
-            "POST /api/v1/math/concept - 解釋數學概念", 
-            "POST /api/v1/math/question - 針對解題過程提問",
-            "GET /api/v1/math/conversations - 獲取數學解題對話列表",
-            "GET /api/v1/math/concepts - 獲取所有概念",
-            "GET /api/v1/math/concepts/search - 搜索概念",
-            "GET /api/v1/math/domains - 獲取領域列表",
-            "GET /api/v1/math/status - 獲取解題器狀態"
-        ]
-    } 

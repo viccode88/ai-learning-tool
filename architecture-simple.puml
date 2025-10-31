@@ -1,0 +1,93 @@
+@startuml
+' ---- 佈局與樣式 ----
+top to bottom direction
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 60
+skinparam rectangle {
+  BackgroundColor White
+  BorderColor Black
+  RoundCorner 10
+}
+skinparam node {
+  BackgroundColor #fff9c4
+  BorderColor Black
+}
+skinparam actor {
+  BackgroundColor #4fc3f7
+  BorderColor Black
+}
+skinparam package {
+  BackgroundColor #f8f8f8
+  BorderColor #999999
+  RoundCorner 10
+}
+title Self AI Project 系統架構圖
+
+' ==== Client ====
+package "使用者端" #e3f2fd {
+  actor User as "使用者\n瀏覽器"
+  node Frontend as "1. React Frontend\n(Vite + TailwindCSS)\n- 英文學習頁面\n- 數學解題頁面\n- 智能查詢頁面"
+}
+
+' ==== Backend 層 ====
+package "後端服務層 (FastAPI)" #f5f5f5 {
+  rectangle EngAPI as "2. 英文學習 API\n(對話 / TTS / 查詢)" #e1f5fe
+  rectangle MathAPI as "3. 數學解題 API\n(文字 / 圖片 )" #fff3e0
+  rectangle ConfigAPI as "4. 配置管理 API\n(模型 / 端點 / 預設值)" #f3e5f5
+}
+
+' ==== 核心邏輯層 ====
+package "核心處理層" #fffde7 {
+  rectangle EngSolver as "English Solver\n(對話邏輯 / 單字查詢)" #fff9c4
+  rectangle MathSolver as "Math Solver\n(解題邏輯 / 推理引擎)" #fff9c4
+  rectangle ModelReg as "Model Registry\n(模型註冊 / 選擇)" #fff9c4
+}
+
+' ==== 外部服務 ====
+package "外部 AI 服務" #e8f5e9 {
+  node OpenAI as "OpenAI API\n- GPT-5系列模型\n- TTS模型"
+}
+
+' ==== 資料存儲層 ====
+package "資料存儲" #fce4ec {
+  database ConvDB as "對話資料庫\n(英文對話記錄\n數學解題記錄)" #f8bbd0
+  database ConfigDB as "配置檔案\n(models.json\nprompts.json\n.env)" #f8bbd0
+}
+
+' ---- 流程 ----
+User -down-> Frontend : 互動操作
+
+Frontend -down-> EngAPI : 英文學習請求
+Frontend -down-> MathAPI : 數學解題請求
+Frontend -down-> ConfigAPI : 設定管理
+
+EngAPI -down-> EngSolver : << 呼叫邏輯 >>
+MathAPI -down-> MathSolver : << 呼叫邏輯 >>
+ConfigAPI -down-> ModelReg : << 配置管理 >>
+
+EngSolver -down-> OpenAI : LLM / TTS API
+MathSolver -down-> OpenAI : LLM / Vision API
+
+EngSolver -down-> ModelReg : 獲取模型
+MathSolver -down-> ModelReg : 獲取模型
+
+EngSolver -right-> ConvDB : << 讀寫對話 >>
+MathSolver -right-> ConvDB : << 讀寫對話 >>
+
+ModelReg -down-> ConfigDB : << 讀取配置 >>
+
+' ---- 說明標註 ----
+note right of OpenAI
+  AI 服務入口:
+  • 對話
+  • 文字轉語音
+  • 數學解題
+end note
+
+note bottom of ConvDB
+  持久化儲存
+end note
+
+@enduml
+

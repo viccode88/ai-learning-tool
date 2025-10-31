@@ -1,0 +1,224 @@
+@startuml Self AI Project Sequence Diagram
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceParticipant {
+  BackgroundColor #E3F2FD
+  BorderColor #424242
+}
+skinparam note {
+  BackgroundColor #FFF9C4
+  BorderColor #F57F17
+}
+
+title Self AI Project - 主要互動流程
+
+actor 使用者 as User
+participant "React Frontend\n(EnglishPage)" as Frontend
+participant "AppContext\n(狀態管理)" as Context
+participant "FastAPI\n(main.py)" as API
+participant "english_api.py" as EngAPI
+participant "english_solver.py" as EngSolver
+participant "model_registry.py" as Registry
+participant "OpenAI API" as OpenAI
+database "conversation_data" as DB
+
+== 1. 初始化與模型選擇 ==
+
+User -> Frontend: 開啟英文學習頁面
+activate Frontend
+
+Frontend -> Context: 獲取當前模型配置
+activate Context
+Context --> Frontend: {model, tts, voice, level}
+deactivate Context
+
+Frontend -> API: GET /api/v1/models
+activate API
+API -> EngAPI: list_models()
+activate EngAPI
+EngAPI -> Registry: get_all()
+activate Registry
+Registry --> EngAPI: 返回模型列表
+deactivate Registry
+EngAPI --> API: {llm, tts, current}
+deactivate EngAPI
+API --> Frontend: 可用模型列表
+deactivate API
+
+User -> Frontend: 選擇模型 (GPT-5-mini, TTS-1)
+Frontend -> Context: 更新模型選擇
+activate Context
+Context --> Frontend: 狀態已更新
+deactivate Context
+
+Frontend -> API: POST /api/v1/models/select
+activate API
+API -> EngAPI: select_models()
+activate EngAPI
+EngAPI -> Registry: set_models(feature, llm, tts)
+activate Registry
+Registry --> EngAPI: 配置已更新
+deactivate Registry
+EngAPI --> API: {ok: true, config}
+deactivate EngAPI
+API --> Frontend: 選擇成功
+deactivate API
+
+== 2. 開始對話 ==
+
+User -> Frontend: 輸入主題 "Travel" 與等級 "B1"
+Frontend -> API: POST /api/v1/conversation\n{topic: "Travel", level: "B1"}
+activate API
+
+API -> EngAPI: start_conversation()
+activate EngAPI
+
+EngAPI -> EngSolver: 創建對話 UUID
+activate EngSolver
+
+EngSolver -> Registry: 獲取選擇的模型
+activate Registry
+Registry --> EngSolver: "gpt-5-mini"
+deactivate Registry
+
+EngSolver -> OpenAI: 發送系統 Prompt + 主題
+activate OpenAI
+note right: 使用 Structured Outputs\n確保回應格式
+OpenAI --> EngSolver: {ai_response, hint, translation}
+deactivate OpenAI
+
+EngSolver -> DB: 保存對話記錄 (active + archived)
+activate DB
+DB --> EngSolver: 保存成功
+deactivate DB
+
+EngSolver --> EngAPI: {sid, ai, hint, translation}
+deactivate EngSolver
+
+EngAPI --> API: 對話已建立
+deactivate EngAPI
+
+API --> Frontend: {sid, ai, hint, translation}
+deactivate API
+
+Frontend --> User: 顯示 AI 開場白 + 提示 + 翻譯
+deactivate Frontend
+
+== 3. 對話互動 (串流模式) ==
+
+User -> Frontend: 輸入回應 "I love traveling"
+activate Frontend
+
+Frontend -> API: POST /api/v1/conversation/{sid}/stream\n{user: "I love traveling"}
+activate API
+
+API -> EngAPI: next_conversation_turn_stream()
+activate EngAPI
+
+EngAPI -> DB: 保存使用者訊息
+activate DB
+DB --> EngAPI: 已保存
+deactivate DB
+
+EngAPI -> EngSolver: 準備對話歷史
+activate EngSolver
+EngSolver --> EngAPI: messages[]
+deactivate EngSolver
+
+EngAPI -> OpenAI: Streaming API 請求\n(Structured Outputs)
+activate OpenAI
+
+loop 串流傳輸
+  OpenAI --> EngAPI: SSE Delta 片段
+  EngAPI --> API: data: {type: 'delta', content}
+  API --> Frontend: SSE 事件
+  Frontend --> User: 即時顯示文字
+end
+
+OpenAI --> EngAPI: 串流完成
+deactivate OpenAI
+
+EngAPI -> EngAPI: 解析完整 JSON
+EngAPI -> DB: 保存 AI 回應 (active + archived)
+activate DB
+DB --> EngAPI: 已保存
+deactivate DB
+
+EngAPI --> API: data: {type: 'complete', data}
+deactivate EngAPI
+
+API --> Frontend: SSE 完成
+deactivate API
+
+Frontend --> User: 顯示完整回應
+deactivate Frontend
+
+== 4. 文字轉語音 ==
+
+User -> Frontend: 點擊發音按鈕
+activate Frontend
+
+Frontend -> API: GET /api/v1/pronounce\n?text=...&voice=alloy&speed=normal
+activate API
+
+API -> EngAPI: get_pronunciation()
+activate EngAPI
+
+EngAPI -> EngSolver: tts()
+activate EngSolver
+
+EngSolver -> Registry: 獲取 TTS 模型
+activate Registry
+Registry --> EngSolver: "tts-1"
+deactivate Registry
+
+EngSolver -> OpenAI: TTS API 請求
+activate OpenAI
+OpenAI --> EngSolver: Audio bytes (MP3)
+deactivate OpenAI
+
+EngSolver --> EngAPI: audio_bytes
+deactivate EngSolver
+
+EngAPI --> API: StreamingResponse
+deactivate EngAPI
+
+API --> Frontend: audio/mpeg stream
+deactivate API
+
+Frontend --> User: 播放語音
+deactivate Frontend
+
+== 5. 查看對話歷史 ==
+
+User -> Frontend: 點擊查看歷史對話
+activate Frontend
+
+Frontend -> API: GET /api/v1/conversations/archived
+activate API
+
+API -> EngAPI: list_archived_conversations()
+activate EngAPI
+
+EngAPI -> EngSolver: list_archives()
+activate EngSolver
+
+EngSolver -> DB: 讀取 archived 目錄 + index.json
+activate DB
+DB --> EngSolver: archives[]
+deactivate DB
+
+EngSolver --> EngAPI: 歸檔列表
+deactivate EngSolver
+
+EngAPI --> API: {archives: [...]}
+deactivate EngAPI
+
+API --> Frontend: 對話列表
+deactivate API
+
+Frontend --> User: 顯示歷史對話清單
+deactivate Frontend
+
+@enduml
+

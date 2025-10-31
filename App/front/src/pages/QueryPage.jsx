@@ -69,80 +69,104 @@ const QueryPage = () => {
     }
   };
 
-  return (
-    <div className="flex h-full w-full dark:text-slate-50">
-      <div className="flex flex-col h-full w-full dark:text-slate-50 ">
-        <div className="p-8 max-w-3xl mx-auto w-full">
-          <h1 className="text-2xl font-bold">單字/片語查詢</h1>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 w-full max-w-3xl mx-auto min-w-max select-none">
-          {loading && <div className="mt-4 ">查詢中...</div>}
-          {error && <div className="mt-4 text-red-500 select-text">錯誤：{error}</div>}
-
-          {!loading && !error && queryword && (
-            <div className="m-6">
-              <h2 className="text-4xl font-bold mb-2 select-text">
-                {queryword} <span className="text-lg italic">{ipa}</span> <span><AudioButton ttstext={queryword} size={18} className="pl-8 pt-8"/></span>
-              </h2>
-
-              {translation && (
-                <div className="mb-4 text-xl text-gray-700 select-text">翻譯：{translation}</div>
-              )}
-
-              {audioUrl && (
-                <div className="mb-4">
-                  <audio controls src={audioUrl}>
-                    Your browser does not support the audio element.
-                  </audio>
-                </div>
-              )}
-
-              {definitions.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold text-xl mb-1 select-text">定義</h3>
-                  <ul className="list-disc ml-6 select-text" >
-                    {definitions.map((def, i) => (
-                      <li key={i}>
-                        {def.pos ? `(${def.pos}) ` : ""}
-                        {def.text}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {examples.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold text-xl mb-1">例句</h3>
-                  <ul className="list-disc ml-6 select-text">
-                    {examples.map((ex, i) => (
-                      <li key={i}>
-                        {ex.text}{" "}
-                        {ex.level && (
-                          <span className="text-sm text-gray-400">[{ex.level}]</span>
-                        )}
-                        <AudioButton ttstext={ex.text} size={18} className="pl-8 pt-8"/>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {grammarTips && (
-                <div className="mb-4 select-text">
-                  <h3 className="font-semibold text-xl mb-1">文法提示</h3>
-                  <p>{grammarTips}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="max-w-3xl mx-auto w-full pb-6">
-          <InputBox showtext="請輸入查詢內容" onSend={handleSend} />
-        </div>
+  const ResultCard = ({ title, children }) => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{title}</h3>
+      <div className="text-gray-700 dark:text-gray-300 space-y-3">
+        {children}
       </div>
-      <EnglishSettings/> 
+    </div>
+  );
+
+  return (
+    <div className="flex h-full w-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-slate-50">
+      <div className="flex flex-col h-full w-full">
+        <header className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">單字/片語查詢</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">輸入單字、片語或句子，立即獲得詳細解釋。</p>
+          </div>
+        </header>
+        
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-4xl mx-auto">
+            {loading && (
+              <div className="flex justify-center items-center h-48">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              </div>
+            )}
+            {error && (
+              <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-600/50 text-red-700 dark:text-red-300 rounded-lg select-text">
+                <strong>錯誤：</strong>{error}
+              </div>
+            )}
+
+            {!loading && !error && queryword && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-5xl font-bold mb-3 select-text flex items-center">
+                    {queryword}
+                    <span className="text-2xl text-gray-500 dark:text-gray-400 ml-4 font-mono">{ipa}</span>
+                    <AudioButton ttstext={queryword} size={24} className="ml-3 text-blue-500 hover:text-blue-600"/>
+                  </h2>
+                  {translation && (
+                    <p className="text-xl text-blue-600 dark:text-blue-400 select-text">{translation}</p>
+                  )}
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {definitions.length > 0 && (
+                    <ResultCard title="定義">
+                      <ul className="list-inside space-y-2">
+                        {definitions.map((def, i) => (
+                          <li key={i} className="flex items-start">
+                            <span className="font-semibold text-blue-500 dark:text-blue-400 w-16 flex-shrink-0">{def.pos || 'N/A'}</span>
+                            <span>{def.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </ResultCard>
+                  )}
+
+                  {examples.length > 0 && (
+                    <ResultCard title="例句">
+                      <ul className="space-y-4">
+                        {examples.map((ex, i) => (
+                          <li key={i} className="flex items-center">
+                            <span className="flex-grow pr-2">{ex.text}</span>
+                            {ex.level && (
+                              <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full flex-shrink-0">{ex.level}</span>
+                            )}
+                            <AudioButton ttstext={ex.text} size={18} className="ml-2 text-gray-500 hover:text-gray-600"/>
+                          </li>
+                        ))}
+                      </ul>
+                    </ResultCard>
+                  )}
+                </div>
+
+                {grammarTips && (
+                  <ResultCard title="文法提示">
+                    <p className="whitespace-pre-wrap leading-relaxed">{grammarTips}</p>
+                  </ResultCard>
+                )}
+
+              </div>
+            )}
+          </div>
+        </main>
+
+        <footer className="p-6 border-t border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm sticky bottom-0">
+          <div className="max-w-4xl mx-auto">
+            <InputBox 
+              showtext="請輸入查詢內容..." 
+              onSend={handleSend} 
+              disabled={loading}
+            />
+          </div>
+        </footer>
+      </div>
+      <EnglishSettings />
     </div>
   );
 };

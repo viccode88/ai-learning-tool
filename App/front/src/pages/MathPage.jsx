@@ -3,6 +3,7 @@ import React ,{ useState,useEffect } from "react";
 import MathShell from "../components/Mathshell";
 import { Import } from "lucide-react";
 import MathList from "../components/Mathlist";
+import MathSettings from "../components/MathSettings";
 
 
 const MathPage = () => {
@@ -16,6 +17,7 @@ const MathPage = () => {
       <div className="flex w-full h-[81vh]">
         {/* <MathList setSelectedConversation={setSelectedProblem}/> */}
         <MathShell  selectedProblem={selectedProblem}/>
+        <MathSettings />
         {/* {selectedProblem ? ( <MathShell selectedProblem={selectedProblem} /> ) : ( <MathShelldefault  selectedProblem={selectedProblem}/> )} */}
       </div>
     </div>

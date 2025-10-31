@@ -1,0 +1,243 @@
+@startuml Math Problem Solving Sequence
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceParticipant {
+  BackgroundColor #E3F2FD
+  BorderColor #424242
+}
+skinparam note {
+  BackgroundColor #FFE0B2
+  BorderColor #E65100
+}
+
+title Self AI Project - 數學解題流程
+
+actor 使用者 as User
+participant "React Frontend\n(MathPage)" as Frontend
+participant "FastAPI\n(main.py)" as API
+participant "math_api.py" as MathAPI
+participant "math_solver.py" as MathSolver
+participant "model_registry.py" as Registry
+participant "prompt_loader.py" as PromptLoader
+participant "OpenAI API\n(GPT-4o-mini)" as OpenAI
+database "conversation_history" as DB
+
+== 1. 文字題解題 ==
+
+User -> Frontend: 輸入數學問題\n"解方程式 x² - 5x + 6 = 0"
+activate Frontend
+
+Frontend -> Frontend: 選擇領域、難度、概念
+note right: 領域: 代數與函數\n難度: 中等\n概念: 一元二次方程式
+
+Frontend -> API: POST /api/v1/math/solve\n{\n  problem: "...",\n  domain: "代數與函數",\n  difficulty: "中等",\n  specific_concepts: ["一元二次方程式"]\n}
+activate API
+
+API -> MathAPI: solve_math_problem()
+activate MathAPI
+
+MathAPI -> MathSolver: solve_problem(problem)
+activate MathSolver
+
+MathSolver -> Registry: 獲取數學模型配置
+activate Registry
+Registry --> MathSolver: "gpt-4o-mini"
+deactivate Registry
+
+MathSolver -> PromptLoader: 載入解題 Prompt 模板
+activate PromptLoader
+PromptLoader --> MathSolver: system_prompt, user_prompt
+deactivate PromptLoader
+
+note right of MathSolver
+  檢查問題描述清晰度:
+  - 問題是否完整?
+  - 是否有足夠資訊?
+  - 是否需要圖片?
+end note
+
+MathSolver -> MathSolver: 構建提示詞\n(高思考努力、條列式輸出)
+
+MathSolver -> OpenAI: Chat Completion API\nmodel: "gpt-4o-mini"\nreasoning_effort: "high"
+activate OpenAI
+
+note right: 使用 O1 系列模型特性\n提供詳細推理過程
+
+OpenAI --> MathSolver: {\n  steps: [...],\n  final_answer: "...",\n  key_insights: [...],\n  reasoning: "..."\n}
+deactivate OpenAI
+
+MathSolver -> DB: 保存解題記錄 (含 conversation_id)
+activate DB
+DB --> MathSolver: 已保存
+deactivate DB
+
+MathSolver --> MathAPI: MathSolutionResponse
+deactivate MathSolver
+
+MathAPI --> API: 解題結果
+deactivate MathAPI
+
+API --> Frontend: {\n  solution: {...},\n  conversation_id: "...",\n  clarity_check: {...}\n}
+deactivate API
+
+Frontend --> User: 顯示:\n- 解題步驟\n- 最終答案\n- 關鍵洞察\n- 推理過程
+deactivate Frontend
+
+== 2. 圖片題解題 ==
+
+User -> Frontend: 上傳數學題目圖片
+activate Frontend
+
+Frontend -> API: POST /api/v1/math/solve-image\n(multipart/form-data)\nimage: [file]\ndomain: "幾何"\ndifficulty: "困難"
+activate API
+
+API -> MathAPI: solve_image_math_problem()
+activate MathAPI
+
+MathAPI -> MathAPI: 驗證圖片格式 (JPEG/PNG/WebP)
+
+MathAPI -> MathSolver: solve_image_problem(image_data, problem)
+activate MathSolver
+
+MathSolver -> Registry: 獲取視覺模型
+activate Registry
+Registry --> MathSolver: "gpt-4o-mini"
+deactivate Registry
+
+MathSolver -> MathSolver: 編碼圖片為 base64
+
+MathSolver -> OpenAI: Vision API 請求\n{\n  model: "gpt-4o-mini",\n  messages: [\n    {role: "user",\n     content: [text, image_url]}\n  ]\n}
+activate OpenAI
+
+note right: 圖片識別能力:\n- 幾何圖形\n- 函數圖表\n- 手寫數學式\n- 複雜圖表
+
+OpenAI --> MathSolver: 識別結果 + 解題步驟
+deactivate OpenAI
+
+MathSolver -> DB: 保存圖片解題記錄
+activate DB
+DB --> MathSolver: 已保存
+deactivate DB
+
+MathSolver --> MathAPI: MathSolutionResponse
+deactivate MathSolver
+
+MathAPI --> API: 解題結果
+deactivate MathAPI
+
+API --> Frontend: 完整解答
+deactivate API
+
+Frontend --> User: 顯示圖片識別結果 + 解題過程
+deactivate Frontend
+
+== 3. 概念查詢 ==
+
+User -> Frontend: 點擊「解釋概念」\n選擇「判別式」
+activate Frontend
+
+Frontend -> API: POST /api/v1/math/concept\n{\n  concept_name: "判別式",\n  domain: "代數與函數"\n}
+activate API
+
+API -> MathAPI: explain_concept()
+activate MathAPI
+
+MathAPI -> MathSolver: get_concept_explanation(request)
+activate MathSolver
+
+MathSolver -> PromptLoader: 載入概念解釋 Prompt
+activate PromptLoader
+PromptLoader --> MathSolver: concept_prompt
+deactivate PromptLoader
+
+MathSolver -> OpenAI: 請求概念詳解
+activate OpenAI
+OpenAI --> MathSolver: {\n  definition: "...",\n  formula: "...",\n  examples: [...],\n  applications: [...]\n}
+deactivate OpenAI
+
+MathSolver --> MathAPI: ConceptExplanation
+deactivate MathSolver
+
+MathAPI --> API: 概念解釋
+deactivate MathAPI
+
+API --> Frontend: 詳細說明
+deactivate API
+
+Frontend --> User: 顯示:\n- 定義\n- 公式\n- 範例\n- 應用場景
+deactivate Frontend
+
+== 4. 互動式提問 ==
+
+User -> Frontend: 針對步驟 2 提問:\n"為什麼用判別式?"
+activate Frontend
+
+Frontend -> API: POST /api/v1/math/question\n{\n  question: "...",\n  step_number: 2,\n  context: "...",\n  conversation_id: "..."\n}
+activate API
+
+API -> MathAPI: ask_question()
+activate MathAPI
+
+MathAPI -> MathSolver: answer_question(request)
+activate MathSolver
+
+MathSolver -> DB: 載入對話上下文
+activate DB
+DB --> MathSolver: conversation_history
+deactivate DB
+
+MathSolver -> OpenAI: 基於上下文回答問題
+activate OpenAI
+OpenAI --> MathSolver: 詳細解答
+deactivate OpenAI
+
+MathSolver -> DB: 更新對話記錄
+activate DB
+DB --> MathSolver: 已更新
+deactivate DB
+
+MathSolver --> MathAPI: {answer: "..."}
+deactivate MathSolver
+
+MathAPI --> API: 問題解答
+deactivate MathAPI
+
+API --> Frontend: 回答
+deactivate API
+
+Frontend --> User: 顯示針對性解答
+deactivate Frontend
+
+== 5. 查看歷史對話 ==
+
+User -> Frontend: 查看過往解題記錄
+activate Frontend
+
+Frontend -> API: GET /api/v1/math/conversations
+activate API
+
+API -> MathAPI: list_math_conversations()
+activate MathAPI
+
+MathAPI -> MathSolver: list_conversations()
+activate MathSolver
+
+MathSolver -> DB: 讀取所有對話檔案\n按更新時間排序
+activate DB
+DB --> MathSolver: conversations[]
+deactivate DB
+
+MathSolver --> MathAPI: List[ConversationInfo]
+deactivate MathSolver
+
+MathAPI --> API: 對話清單
+deactivate MathAPI
+
+API --> Frontend: {\n  conversations: [\n    {id, title, timestamp, ...}\n  ]\n}
+deactivate API
+
+Frontend --> User: 顯示歷史解題列表
+deactivate Frontend
+
+@enduml
+

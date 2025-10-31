@@ -1,0 +1,168 @@
+@startuml Self AI Project Architecture
+!define RECTANGLE class
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #FEFEFE
+skinparam component {
+  BackgroundColor<<frontend>> #E3F2FD
+  BackgroundColor<<backend>> #FFF3E0
+  BackgroundColor<<external>> #F3E5F5
+  BackgroundColor<<storage>> #E8F5E9
+  BorderColor #424242
+  FontSize 12
+}
+
+title Self AI Project - 系統架構圖
+
+' 前端層
+package "前端層 (Frontend)" <<frontend>> {
+  [React App] as App
+  [AppContext\n狀態管理] as Context
+  
+  package "頁面組件" {
+    [HomePage\n首頁] as Home
+    [EnglishPage\n英文學習] as English
+    [MathPage\n數學解題] as Math
+    [QueryPage\n智能查詢] as Query
+    [SettingsPage\n設定頁面] as Settings
+  }
+  
+  package "UI 組件" {
+    [Sidebar\n側邊欄] as Sidebar
+    [ChatBox\n對話框] as ChatBox
+    [InputBox\n輸入框] as InputBox
+    [EnglishSettings\n英文設定] as EngSettings
+    [MathSettings\n數學設定] as MathSettings
+  }
+}
+
+' 後端層
+package "後端層 (Backend - FastAPI)" <<backend>> {
+  [main.py\nFastAPI App] as MainApp
+  
+  package "API 端點" {
+    [english_api.py\n英文學習 API] as EngAPI
+    [math_api.py\n數學解題 API] as MathAPI
+    [config_api.py\n配置管理 API] as ConfigAPI
+  }
+  
+  package "核心邏輯" {
+    [english_solver.py\n英文學習核心] as EngSolver
+    [math_solver.py\n數學解題核心] as MathSolver
+  }
+  
+  package "配置管理" {
+    [model_registry.py\n模型註冊器] as ModelReg
+    [config_loader.py\n配置加載器] as ConfigLoader
+    [prompt_loader.py\nPrompt 加載器] as PromptLoader
+  }
+}
+
+' 外部服務層
+package "外部服務層 (External Services)" <<external>> {
+  [OpenAI API\n- GPT Models\n- TTS Models\n- Vision API] as OpenAI
+}
+
+' 資料存儲層
+package "資料存儲層 (Data Storage)" <<storage>> {
+  database "對話記錄" {
+    [conversation_data/\nconversations/] as ConvData
+    [conversation_data/\narchived/] as ArchivedData
+    [conversation_history/] as ConvHistory
+  }
+  
+  database "配置檔案" {
+    [config/models.json\n模型配置] as ModelsConfig
+    [prompts/prompts.json\nPrompt 模板] as PromptsConfig
+    [.env\nAPI Keys] as EnvFile
+  }
+}
+
+' 前端內部連接
+App --> Context : 使用狀態
+App --> Sidebar : 導航控制
+App --> Home
+App --> English
+App --> Math
+App --> Query
+App --> Settings
+
+English --> ChatBox : 顯示對話
+English --> InputBox : 輸入處理
+English --> EngSettings : 設定控制
+
+Math --> ChatBox : 顯示對話
+Math --> InputBox : 輸入處理
+Math --> MathSettings : 設定控制
+
+' 前端到後端的連接
+Context --> MainApp : HTTP/REST API
+Home --> MainApp : 健康檢查
+English --> EngAPI : 英文學習請求
+Math --> MathAPI : 數學解題請求
+Query --> EngAPI : 智能查詢
+Settings --> ConfigAPI : 配置管理
+
+' 後端內部連接
+MainApp --> EngAPI : 註冊端點
+MainApp --> MathAPI : 註冊端點
+MainApp --> ConfigAPI : 註冊端點
+
+EngAPI --> EngSolver : 呼叫核心邏輯
+MathAPI --> MathSolver : 呼叫核心邏輯
+
+EngSolver --> ModelReg : 獲取模型配置
+MathSolver --> ModelReg : 獲取模型配置
+
+ConfigAPI --> ConfigLoader : 管理配置
+ConfigLoader --> ModelReg : 同步模型
+EngSolver --> PromptLoader : 加載 Prompts
+MathSolver --> PromptLoader : 加載 Prompts
+
+' 後端到外部服務
+EngSolver --> OpenAI : API 呼叫\n(LLM, TTS)
+MathSolver --> OpenAI : API 呼叫\n(LLM, Vision)
+
+' 後端到資料存儲
+EngSolver --> ConvData : 保存對話
+EngSolver --> ArchivedData : 歸檔對話
+MathSolver --> ConvHistory : 保存對話
+
+ConfigLoader --> ModelsConfig : 讀取/寫入
+PromptLoader --> PromptsConfig : 讀取
+MainApp --> EnvFile : 讀取 API Keys
+
+' 註解說明
+note right of OpenAI
+  提供 AI 功能:
+  - GPT-4o-mini (對話)
+  - GPT-5-mini (智能查詢)
+  - TTS (文字轉語音)
+  - Vision (圖片識別)
+end note
+
+note right of ModelReg
+  動態模型管理:
+  - 註冊可用模型
+  - 追蹤當前選擇
+  - 功能特性配置
+end note
+
+note bottom of ConvData
+  資料持久化:
+  - 即時對話記錄
+  - 歸檔歷史對話
+  - JSON 格式存儲
+  - 索引檔案管理
+end note
+
+legend right
+  |= 顏色 |= 說明 |
+  | <back:#E3F2FD>   </back> | 前端層 (React) |
+  | <back:#FFF3E0>   </back> | 後端層 (FastAPI) |
+  | <back:#F3E5F5>   </back> | 外部服務 |
+  | <back:#E8F5E9>   </back> | 資料存儲 |
+endlegend
+
+@enduml
+

@@ -29,9 +29,9 @@ const fetchModelOptions = async () => {
   }
 };
 
-const selectModel = async ({ llm, tts, tts_voice }) => {
+const selectModel = async ({ feature = "english", llm, tts, tts_voice }) => {
   try {
-    const payload = { llm, tts, tts_voice };
+    const payload = { feature, llm, tts, tts_voice };
     console.log("selectModel payload:", payload);
     const res = await fetch("http://localhost:8000/api/v1/models/select", {
       method: "POST",
@@ -60,6 +60,7 @@ const EnglishSettings = () => {
   const [ttsOptions, setTTSOptions] = useState([]);
   const [ttsData, setTTSData] = useState({});
   const [voiceOptions, setVoiceOptions] = useState([]);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -72,15 +73,27 @@ const EnglishSettings = () => {
   }, []);
 
   useEffect(() => {
-    fetchModelOptions().then(({ llmOptions, ttsOptions, ttsData }) => {
+    const bootstrap = async () => {
+      const { llmOptions, ttsOptions, ttsData } = await fetchModelOptions();
       setLLMOptions(llmOptions);
       setTTSOptions(ttsOptions);
       setTTSData(ttsData);
 
-      // 如果尚未設定，就預設為第一個值
-      if (!model && llmOptions.length > 0) setModel(llmOptions[0].value);
-      if (!tts && ttsOptions.length > 0) setTts(ttsOptions[0].value);
-    });
+      // 從後端抓取 last 並驗證 llm/tts 是否存在於可選清單
+      try {
+        const res = await fetch("http://localhost:8000/api/v1/models/last?feature=english");
+        const last = await res.json();
+        const llmSet = new Set((llmOptions || []).map(o => o.value));
+        const ttsSet = new Set((ttsOptions || []).map(o => o.value));
+        if (last?.llm && llmSet.has(last.llm)) setModel(last.llm);
+        if (last?.tts && ttsSet.has(last.tts)) setTts(last.tts);
+        if (last?.tts_voice) setVoice(last.tts_voice);
+      } catch {}
+
+      // 標記初始化完成，避免未完成前將本地值回寫到後端
+      setBootstrapped(true);
+    };
+    bootstrap();
   }, []);
 
   useEffect(() => {
@@ -98,10 +111,11 @@ const EnglishSettings = () => {
   }, [tts, ttsData]);
 
   useEffect(() => {
+    if (!bootstrapped) return;
     if (model && tts && voice) {
-      selectModel({ llm: model, tts, tts_voice: voice });
+      selectModel({ feature: "english", llm: model, tts, tts_voice: voice });
     }
-  }, [model, tts, voice]);
+  }, [model, tts, voice, bootstrapped]);
 
   const levelOptions = ["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => ({
     label: lvl,

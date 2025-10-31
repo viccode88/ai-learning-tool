@@ -41,8 +41,8 @@ const Sidebar = ({ currentPage, onPageChange }) => {
             </span>
           </li>
         ))}
-        <il className="mb-2">
-          <ThemeToggle isSidebarOpen={isHovered} /></il>
+        <li className="mb-2">
+          <ThemeToggle isSidebarOpen={isHovered} /></li>
       </ul>
     </div>
   );

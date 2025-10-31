@@ -1,0 +1,131 @@
+{
+  "endpoints": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "base_url": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY",
+      "enabled": true
+    }
+  ],
+  "models": {
+    "llm": [
+      {
+        "id": "gpt-4o",
+        "name": "GPT-4o",
+        "endpoint": "openai",
+        "enabled": true
+      },
+      {
+        "id": "gpt-5-nano",
+        "name": "gpt-5-nano",
+        "endpoint": "openai",
+        "enabled": true
+      },
+      {
+        "id": "gpt-4o-mini",
+        "name": "GPT-4o Mini",
+        "endpoint": "openai",
+        "enabled": true
+      },
+      {
+        "id": "gpt-5",
+        "name": "GPT-5",
+        "endpoint": "openai",
+        "enabled": true
+      },
+      {
+        "id": "gpt-5-mini",
+        "name": "GPT-5 Mini",
+        "endpoint": "openai",
+        "enabled": true
+      },
+      {
+        "id": "o1",
+        "name": "O1",
+        "endpoint": "openai",
+        "enabled": true
+      },
+      {
+        "id": "o1-mini",
+        "name": "O1 Mini",
+        "endpoint": "openai",
+        "enabled": true
+      },
+      {
+        "id": "o3-mini",
+        "name": "O3 Mini",
+        "endpoint": "openai",
+        "enabled": true
+      }
+    ],
+    "tts": [
+      {
+        "id": "tts-1",
+        "name": "TTS-1",
+        "endpoint": "openai",
+        "enabled": true,
+        "voices": [
+          "alloy",
+          "echo",
+          "fable",
+          "onyx",
+          "nova",
+          "shimmer"
+        ]
+      },
+      {
+        "id": "tts-1-hd",
+        "name": "TTS-1 HD",
+        "endpoint": "openai",
+        "enabled": true,
+        "voices": [
+          "alloy",
+          "echo",
+          "fable",
+          "onyx",
+          "nova",
+          "shimmer"
+        ]
+      },
+      {
+        "id": "gpt-4o-mini-tts",
+        "name": "GPT-4o Mini TTS",
+        "endpoint": "openai",
+        "enabled": true,
+        "voices": [
+          "alloy",
+          "ash",
+          "ballad",
+          "coral",
+          "echo",
+          "fable",
+          "nova",
+          "onyx",
+          "sage",
+          "shimmer"
+        ]
+      }
+    ]
+  },
+  "defaults": {
+    "english": {
+      "llm": "gpt-5-mini",
+      "tts": "gpt-4o-mini-tts",
+      "tts_voice": "alloy"
+    },
+    "math": {
+      "llm": "gpt-5-mini"
+    }
+  },
+  "last_selected": {
+    "english": {
+      "llm": "gpt-4o-mini",
+      "tts": "gpt-4o-mini-tts",
+      "tts_voice": "alloy"
+    },
+    "math": {
+      "llm": "gpt-5-mini"
+    }
+  }
+}

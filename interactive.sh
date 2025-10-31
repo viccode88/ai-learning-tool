@@ -9,6 +9,7 @@ readonly FRONTEND_DIR="$ROOT_DIR/App/front"
 readonly VENV_DIR="$ROOT_DIR/.venv"
 readonly RUN_DIR="$ROOT_DIR/run"
 readonly REQUIREMENTS_FILE="$ROOT_DIR/requirements.txt"
+readonly ENV_FILE="$BACKEND_DIR/.env"
 
 # --- Runtime Files ---
 readonly VENV_HASH_FILE="$RUN_DIR/venv.hash"
@@ -92,6 +93,158 @@ rebuild_venv() {
     printf "${GREEN}虛擬環境已建立。${NC}\n"
 }
 
+# --- API Key Management ---
+check_api_key() {
+    # 檢查 .env 文件是否存在
+    if [ ! -f "$ENV_FILE" ]; then
+        return 1  # .env 文件不存在
+    fi
+    
+    # 檢查是否包含有效的 OPENAI_API_KEY
+    if grep -q "^OPENAI_API_KEY=.\+$" "$ENV_FILE" 2>/dev/null; then
+        local api_key=$(grep "^OPENAI_API_KEY=" "$ENV_FILE" | cut -d'=' -f2-)
+        # 檢查是否為佔位符
+        if [ "$api_key" = "YOUR_OPENAI_API_KEY_HERE" ] || [ -z "$api_key" ]; then
+            return 1  # API Key 是佔位符或空值
+        fi
+        return 0  # API Key 存在且有效
+    else
+        return 1  # 沒有找到 OPENAI_API_KEY
+    fi
+}
+
+prompt_for_api_key() {
+    printf "\n${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    printf "${RED}⚠️  缺少 OpenAI API 金鑰${NC}\n"
+    printf "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n\n"
+    
+    printf "${CYAN}此應用程式需要 OpenAI API 金鑰才能運行。${NC}\n\n"
+    
+    printf "${BLUE}如何獲取 API 金鑰：${NC}\n"
+    printf "1. 前往 ${GREEN}https://platform.openai.com/api-keys${NC}\n"
+    printf "2. 登入您的 OpenAI 帳戶\n"
+    printf "3. 點擊 'Create new secret key' 創建新的 API 金鑰\n"
+    printf "4. 複製生成的金鑰（格式類似：sk-...）\n\n"
+    
+    printf "${YELLOW}請輸入您的 OpenAI API 金鑰：${NC}\n"
+    printf "${CYAN}>${NC} "
+    
+    # 讀取 API 金鑰（隱藏輸入）
+    local api_key=""
+    read -r api_key
+    
+    # 驗證輸入
+    if [ -z "$api_key" ]; then
+        printf "\n${RED}錯誤：API 金鑰不能為空。${NC}\n"
+        return 1
+    fi
+    
+    # 簡單驗證格式（OpenAI API 金鑰通常以 sk- 開頭）
+    if [[ ! "$api_key" =~ ^sk- ]]; then
+        printf "\n${YELLOW}警告：API 金鑰格式可能不正確（通常以 'sk-' 開頭）${NC}\n"
+        printf "${YELLOW}是否仍要繼續？(y/N): ${NC}"
+        read -r confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            printf "${RED}已取消。${NC}\n"
+            return 1
+        fi
+    fi
+    
+    # 創建 .env 文件
+    printf "\n${CYAN}正在創建 .env 文件...${NC}\n"
+    cat > "$ENV_FILE" << EOF
+# OpenAI API Configuration
+OPENAI_API_KEY=$api_key
+
+# 其他環境變數可以在此添加
+# 例如：
+# BACKEND_PORT=8000
+# FRONTEND_PORT=5173
+EOF
+    
+    if [ $? -eq 0 ]; then
+        printf "${GREEN}✅ .env 文件已成功創建！${NC}\n"
+        printf "${CYAN}位置：${ENV_FILE}${NC}\n\n"
+        
+        # 立即驗證 API 金鑰
+        if verify_api_key_with_openai "$api_key"; then
+            printf "${YELLOW}注意事項：${NC}\n"
+            printf "• .env 文件包含敏感資訊，請勿分享或提交到版本控制系統\n"
+            printf "• 如需更新 API 金鑰，可直接編輯 ${ENV_FILE}\n"
+            printf "• 或刪除該文件後重新啟動，系統會再次提示輸入\n\n"
+            return 0
+        else
+            printf "${YELLOW}API 金鑰驗證失敗，但 .env 文件已創建。${NC}\n"
+            printf "${YELLOW}請檢查金鑰是否正確，或稍後使用 'apikey' 命令更新。${NC}\n\n"
+            return 1
+        fi
+    else
+        printf "${RED}❌ 創建 .env 文件失敗。${NC}\n"
+        return 1
+    fi
+}
+
+verify_api_key_with_openai() {
+    local api_key="$1"
+    printf "${CYAN}正在驗證 API 金鑰有效性...${NC}"
+    
+    # 使用 OpenAI API 驗證金鑰並獲取模型名單
+    local response=$(curl -s -w "\n%{http_code}" \
+        -H "Authorization: Bearer $api_key" \
+        "https://api.openai.com/v1/models" 2>/dev/null)
+    
+    local http_code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | head -n -1)
+    
+    if [ "$http_code" = "200" ]; then
+        # 解析模型名單
+        local model_count=$(echo "$body" | grep -o '"id"' | wc -l | tr -d ' ')
+        local gpt_models=$(echo "$body" | grep -o '"gpt-[^"]*"' | sort -u | tr -d '"' | head -5)
+        
+        printf "\r${GREEN}✅ API 金鑰驗證成功！${NC}              \n"
+        printf "${CYAN}可用模型數量：${model_count}${NC}\n"
+        
+        if [ -n "$gpt_models" ]; then
+            printf "${CYAN}主要 GPT 模型：${NC}\n"
+            echo "$gpt_models" | while read -r model; do
+                printf "  • ${GREEN}%s${NC}\n" "$model"
+            done
+        fi
+        printf "\n"
+        return 0
+    elif [ "$http_code" = "401" ]; then
+        printf "\r${RED}❌ API 金鑰無效或已過期${NC}\n"
+        return 1
+    elif [ "$http_code" = "429" ]; then
+        printf "\r${YELLOW}⚠️  API 請求過於頻繁，請稍後再試${NC}\n"
+        return 1
+    elif [ "$http_code" = "403" ]; then
+        printf "\r${RED}❌ API 金鑰權限不足${NC}\n"
+        return 1
+    else
+        printf "\r${YELLOW}⚠️  無法驗證 API 金鑰（HTTP ${http_code}）${NC}\n"
+        return 1
+    fi
+}
+
+verify_api_key_with_backend() {
+    printf "${CYAN}正在驗證後端服務...${NC}"
+    
+    # 等待後端啟動
+    sleep 2
+    
+    # 嘗試呼叫健康檢查端點
+    local health_response=$(curl -s -f "http://127.0.0.1:$BACKEND_PORT/api/v1/meta/health" 2>/dev/null)
+    
+    if [ $? -eq 0 ]; then
+        printf "\r${GREEN}✅ 後端服務運行正常！${NC}              \n"
+        return 0
+    else
+        printf "\r${YELLOW}⚠️  後端服務可能尚未完全啟動${NC}\n"
+        return 0  # 仍然返回成功，讓後端繼續啟動
+    fi
+}
+
 # --- Health Checks ---
 check_backend_health() {
     printf "${CYAN}等待後端服務啟動...${NC}"
@@ -136,6 +289,22 @@ start_backend() {
     if check_backend; then
         printf "${YELLOW}Backend 已經在運行 (PID: $(cat "$BACKEND_PID_FILE")).${NC}\n"
         return
+    fi
+
+    # 檢查 API 金鑰
+    if ! check_api_key; then
+        if ! prompt_for_api_key; then
+            printf "${RED}無法啟動 Backend：缺少有效的 API 金鑰。${NC}\n"
+            return 1
+        fi
+    else
+        printf "${GREEN}✅ 已找到 API 金鑰${NC}\n"
+        # 驗證現有的 API 金鑰
+        local current_key=$(grep "^OPENAI_API_KEY=" "$ENV_FILE" | cut -d'=' -f2-)
+        if ! verify_api_key_with_openai "$current_key"; then
+            printf "${YELLOW}API 金鑰驗證失敗，但將繼續啟動後端。${NC}\n"
+            printf "${YELLOW}請稍後使用 'apikey' 命令檢查或更新金鑰。${NC}\n"
+        fi
     fi
 
     if check_venv_needs_rebuild; then
@@ -300,9 +469,69 @@ show_help() {
     printf "${YELLOW}logs${NC}      - 顯示即時日誌\n"
     printf "${YELLOW}backend${NC}   - 只啟動後端\n"
     printf "${YELLOW}frontend${NC}  - 只啟動前端\n"
+    printf "${YELLOW}apikey${NC}    - 管理 API 金鑰\n"
     printf "${YELLOW}help${NC}      - 顯示此說明\n"
     printf "${YELLOW}exit${NC}      - 離開程式\n"
     printf "${BLUE}================${NC}\n\n"
+}
+
+manage_api_key() {
+    printf "\n${CYAN}=== API 金鑰管理 ===${NC}\n\n"
+    
+    if check_api_key; then
+        local masked_key=$(grep "^OPENAI_API_KEY=" "$ENV_FILE" | cut -d'=' -f2- | sed 's/\(.\{7\}\).*/\1.../')
+        printf "${GREEN}✅ 目前已設定 API 金鑰：${masked_key}${NC}\n\n"
+        
+        printf "選項：\n"
+        printf "1) 顯示完整金鑰\n"
+        printf "2) 驗證 API 金鑰\n"
+        printf "3) 更新 API 金鑰\n"
+        printf "4) 刪除 API 金鑰\n"
+        printf "5) 返回\n\n"
+        printf "${CYAN}請選擇 (1-5): ${NC}"
+        read -r choice
+        
+        case "$choice" in
+            1)
+                local full_key=$(grep "^OPENAI_API_KEY=" "$ENV_FILE" | cut -d'=' -f2-)
+                printf "\n${YELLOW}完整 API 金鑰：${NC}\n${full_key}\n\n"
+                printf "${RED}注意：請勿與他人分享此金鑰！${NC}\n"
+                ;;
+            2)
+                local current_key=$(grep "^OPENAI_API_KEY=" "$ENV_FILE" | cut -d'=' -f2-)
+                printf "\n"
+                verify_api_key_with_openai "$current_key"
+                ;;
+            3)
+                printf "\n${YELLOW}正在更新 API 金鑰...${NC}\n"
+                rm -f "$ENV_FILE"
+                if prompt_for_api_key; then
+                    printf "${GREEN}API 金鑰已更新。請重新啟動 Backend 以套用變更。${NC}\n"
+                fi
+                ;;
+            4)
+                printf "\n${RED}確定要刪除 API 金鑰嗎？(y/N): ${NC}"
+                read -r confirm
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    rm -f "$ENV_FILE"
+                    printf "${GREEN}API 金鑰已刪除。${NC}\n"
+                else
+                    printf "${YELLOW}已取消。${NC}\n"
+                fi
+                ;;
+            5|*)
+                printf "${YELLOW}返回主選單。${NC}\n"
+                ;;
+        esac
+    else
+        printf "${RED}❌ 尚未設定 API 金鑰${NC}\n\n"
+        printf "${YELLOW}是否要現在設定？(y/N): ${NC}"
+        read -r confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            prompt_for_api_key
+        fi
+    fi
+    printf "\n"
 }
 
 show_logs() {
@@ -413,6 +642,9 @@ while true; do
         frontend)
             start_frontend
             show_status
+            ;;
+        apikey)
+            manage_api_key
             ;;
         help)
             show_help

@@ -69,9 +69,9 @@ const EnglishShelldefault = ({ setSelectedConversation}) => {
           </div>
 
           <div className="transform transition-all duration-200">
-            <InputBox
-              onSend={(data) => createConversation(data.text)}
-              showtext="請輸入你的需求說明..."
+            <InputBox 
+                onSendMessage={createConversation} 
+                showtext="請輸入你想聊的..."
             />
           </div>
         </div>
